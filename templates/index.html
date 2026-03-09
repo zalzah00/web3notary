@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Data Notary</title>
+    <!-- We use Ethers.js to talk to MetaMask -->
+    <script src="https://ethers.io"></script>
+</head>
+<body>
+    <h1>Data Science Audit Tool</h1>
+    <input type="file" id="fileInput"><br><br>
+    <input type="text" id="message" placeholder="Audit Message"><br><br>
+    <button onclick="processAndSign()">1. Upload & 2. Sign with MetaMask</button>
+
+    <div id="status"></div>
+
+    <script>
+        async function processAndSign() {
+            const fileInput = document.getElementById('fileInput');
+            const message = document.getElementById('message').value;
+            if (!fileInput.files[0]) return alert("Upload a file first!");
+
+            // 1. Send file to Python (Flask) to get the Hash
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch('/generate_hash', { method: 'POST', body: formData });
+            const data = await response.json();
+            const fileHash = data.hash;
+            const fileName = data.filename;
+
+            document.getElementById('status').innerText = "Hash generated: " + fileHash + ". Opening MetaMask...";
+
+            // 2. Connect to MetaMask
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            const signer = provider.getSigner();
+
+            // 3. Connect to your Sepolia Contract
+            const contractAddress = "0x22e31763b96a20390aEeAEA2647952Fe6c2EE8F7";
+            const abi = [...]; // Paste ABI from Remix here
+            const contract = new ethers.Contract(contractAddress, abi, signer);
+
+            // 4. Trigger MetaMask Popup!
+            try {
+                const tx = await contract.notarize(fileHash, fileName, message);
+                document.getElementById('status').innerHTML = 
+                    `Success! <a href="https://etherscan.io{tx.hash}" target="_blank">View Audit Proof</a>`;
+            } catch (err) {
+                document.getElementById('status').innerText = "Transaction Cancelled.";
+            }
+        }
+    </script>
+</body>
+</html>
