@@ -13,8 +13,12 @@ def generate_hash():
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
     # Generate the SHA-256 fingerprint
     content = file.read()
+    # Adding '0x' prefix so it's ready for Ethereum bytes32
     file_hash = "0x" + hashlib.sha256(content).hexdigest()
     
     return jsonify({
